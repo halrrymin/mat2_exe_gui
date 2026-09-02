@@ -1,0 +1,68 @@
+name: Build and release mat2 for Windows
+
+on:
+  schedule:
+    # Check PyPI once a day. A manual run is also available from the Actions tab.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read latest mat2 version from PyPI
+        id: version
+        shell: pwsh
+        run: |
+          $info = Invoke-RestMethod 'https://pypi.org/pypi/mat2/json'
+          $version = [string]$info.info.version
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "PyPI mat2 version: $version"
+
+      - name: Skip if this version was already released
+        id: existing
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $tag = "mat2-v$env:VERSION"
+          gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
+          $found = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
+          "found=$found" >> $env:GITHUB_OUTPUT
+
+      - name: Set up MSYS2 UCRT64
+        if: steps.existing.outputs.found != 'true'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-cairo
+            mingw-w64-ucrt-x86_64-python-tkinter
+            mingw-w64-ucrt-x86_64-poppler
+
+      - name: Build one-file executable
+        if: steps.existing.outputs.found != 'true'
+        shell: pwsh
+        run: .\build-windows.ps1
+
+      - name: Create release
+        if: steps.existing.outputs.found != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $tag = "mat2-v$env:VERSION"
+          gh release create $tag dist\mat2.exe `
+            --title "mat2 $env:VERSION for Windows" `
+            --generate-notes
