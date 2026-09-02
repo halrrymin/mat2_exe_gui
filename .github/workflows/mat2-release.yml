@@ -48,8 +48,6 @@ jobs:
         if: steps.existing.outputs.found != 'true'
         uses: msys2/setup-msys2@v2
         with:
-          # Match build-windows.ps1 and make the installation location explicit.
-          location: C:\\msys64
           msystem: UCRT64
           update: true
           install: >-
@@ -59,10 +57,23 @@ jobs:
             mingw-w64-ucrt-x86_64-python-cairo
             mingw-w64-ucrt-x86_64-poppler
 
+      - name: Locate MSYS2 installation
+        if: steps.existing.outputs.found != 'true'
+        id: msys2-path
+        shell: pwsh
+        run: |
+          $python = Get-ChildItem -Path $env:RUNNER_TEMP, 'C:\\msys64', 'D:\\a\\_temp' -Filter python.exe -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '[\\/]ucrt64[\\/]bin[\\/]python\.exe$' } |
+            Select-Object -First 1
+          if (-not $python) { throw 'Could not locate MSYS2 UCRT64 python.exe on the runner.' }
+          $root = $python.Directory.Parent.Parent.FullName
+          Write-Host "MSYS2 root: $root"
+          "root=$root" >> $env:GITHUB_OUTPUT
+
       - name: Build one-file executable
         if: steps.existing.outputs.found != 'true'
         shell: pwsh
-        run: .\build-windows.ps1
+        run: .\build-windows.ps1 -MsysRoot '${{ steps.msys2-path.outputs.root }}'
 
       - name: Verify executable
         if: steps.existing.outputs.found != 'true'
