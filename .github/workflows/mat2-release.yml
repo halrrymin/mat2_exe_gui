@@ -1,6 +1,8 @@
 name: Build and release mat2 for Windows
 
 on:
+  push:
+    branches: [main]
   schedule:
     # Check PyPI once a day. A manual run is also available from the Actions tab.
     - cron: '17 3 * * *'
