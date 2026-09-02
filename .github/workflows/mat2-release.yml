@@ -33,8 +33,12 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $tag = "mat2-v$env:VERSION"
-          gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
-          $found = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
+          try {
+            gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
+            $found = 'true'
+          } catch {
+            $found = 'false'
+          }
           "found=$found" >> $env:GITHUB_OUTPUT
 
       - name: Set up MSYS2 UCRT64
@@ -54,6 +58,24 @@ jobs:
         if: steps.existing.outputs.found != 'true'
         shell: pwsh
         run: .\build-windows.ps1
+
+      - name: Verify executable
+        if: steps.existing.outputs.found != 'true'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist\mat2-gui.exe)) { throw 'mat2-gui.exe was not produced.' }
+          Get-Item dist\mat2-gui.exe | Select-Object FullName,Length
+
+      - name: Upload build artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mat2-build-diagnostics
+          path: |
+            build
+            *.spec
+            dist
+          if-no-files-found: ignore
 
       - name: Create release
         if: steps.existing.outputs.found != 'true'
