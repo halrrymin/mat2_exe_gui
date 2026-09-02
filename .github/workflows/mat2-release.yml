@@ -54,7 +54,6 @@ jobs:
             mingw-w64-ucrt-x86_64-python
             mingw-w64-ucrt-x86_64-python-gobject
             mingw-w64-ucrt-x86_64-python-cairo
-            mingw-w64-ucrt-x86_64-python-tkinter
             mingw-w64-ucrt-x86_64-poppler
 
       - name: Build one-file executable
