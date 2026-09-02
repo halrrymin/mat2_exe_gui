@@ -20,6 +20,8 @@ $python = Join-Path $MsysRoot 'ucrt64\bin\python.exe'
 if (-not (Test-Path $python)) {
     throw "MSYS2 UCRT64 Python was not found at: $python"
 }
+# PyInstaller resolves PyGObject's native GTK/GIO dependencies through PATH.
+$env:PATH = (Join-Path $MsysRoot 'ucrt64\bin') + ';' + (Join-Path $MsysRoot 'usr\bin') + ';' + $env:PATH
 
 # GTK/PyGObject, cairo and Tk come from MSYS2; avoid asking pip to rebuild them.
 & $python -m pip install --upgrade --break-system-packages --no-deps mat2
