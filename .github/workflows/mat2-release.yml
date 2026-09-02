@@ -35,8 +35,13 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $tag = "mat2-v$env:VERSION"
-          gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
-          $found = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
+          $uri = "https://api.github.com/repos/${{ github.repository }}/git/ref/tags/$tag"
+          try {
+            Invoke-RestMethod -Uri $uri -Headers @{ Authorization = "Bearer $env:GH_TOKEN" } -ErrorAction Stop | Out-Null
+            $found = 'true'
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -eq 404) { $found = 'false' } else { throw }
+          }
           "found=$found" >> $env:GITHUB_OUTPUT
 
       - name: Set up MSYS2 UCRT64
