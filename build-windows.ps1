@@ -17,10 +17,13 @@ if (-not (Test-Path $python)) {
     throw "MSYS2 UCRT64 Python was not found at: $python"
 }
 
-& $python -m pip install --upgrade --break-system-packages pip
 # GTK/PyGObject, cairo and Tk come from MSYS2; avoid asking pip to rebuild them.
-& $python -m pip install --upgrade --break-system-packages --no-deps mat2
-& $python -m pip install --upgrade --break-system-packages pyinstaller mutagen
+& $python -m pip install --upgrade --no-deps mat2
+& $python -m pip install --upgrade pyinstaller mutagen
+
+$mat2Script = Join-Path (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))") 'mat2-script.py'
+if (-not (Test-Path $mat2Script)) { $mat2Script = Join-Path (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))") 'mat2' }
+if (-not (Test-Path $mat2Script)) { throw "Installed mat2 command script was not found." }
 
 $entryPoint = @'
 from pathlib import Path
@@ -53,7 +56,7 @@ try {
         --hidden-import gi.repository.GLib `
         --hidden-import gi.repository.Poppler `
         --hidden-import tkinter `
-        --add-data "$entryFile;." `
+        --add-data "$mat2Script;mat2script" `
         (Join-Path $PSScriptRoot 'mat2_gui.py')
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE." }
 }
