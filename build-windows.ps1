@@ -21,8 +21,9 @@ if (-not (Test-Path $python)) {
 & $python -m pip install --upgrade --no-deps mat2
 & $python -m pip install --upgrade pyinstaller mutagen
 
-$mat2Script = Join-Path (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))") 'mat2-script.py'
-if (-not (Test-Path $mat2Script)) { $mat2Script = Join-Path (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))") 'mat2' }
+$scriptsPath = (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))").Trim()
+$mat2Script = Join-Path $scriptsPath 'mat2-script.py'
+if (-not (Test-Path $mat2Script)) { $mat2Script = Join-Path $scriptsPath 'mat2' }
 if (-not (Test-Path $mat2Script)) { throw "Installed mat2 command script was not found." }
 
 $entryPoint = @'
