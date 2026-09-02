@@ -33,12 +33,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $tag = "mat2-v$env:VERSION"
-          try {
-            gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
-            $found = 'true'
-          } catch {
-            $found = 'false'
-          }
+          gh api "repos/${{ github.repository }}/git/ref/tags/$tag" *> $null
+          $found = if ($LASTEXITCODE -eq 0) { 'true' } else { 'false' }
           "found=$found" >> $env:GITHUB_OUTPUT
 
       - name: Set up MSYS2 UCRT64
