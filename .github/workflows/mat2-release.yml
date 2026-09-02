@@ -63,6 +63,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $tag = "mat2-v$env:VERSION"
-          gh release create $tag dist\mat2.exe `
+          gh release create $tag dist\mat2-gui.exe `
             --title "mat2 $env:VERSION for Windows" `
             --generate-notes
