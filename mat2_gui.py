@@ -4,6 +4,7 @@ import sys
 import threading
 import runpy
 import sysconfig
+import os
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -91,13 +92,11 @@ class Mat2Gui(tk.Tk):
 if __name__ == "__main__":
     if "--mat2-cli" in sys.argv:
         sys.argv.remove("--mat2-cli")
-        scripts = Path(sysconfig.get_path("scripts"))
-        for name in ("mat2-script.py", "mat2"):
-            candidate = scripts / name
-            if candidate.is_file():
-                runpy.run_path(str(candidate), run_name="__main__")
-                break
-        else:
-            raise RuntimeError("The installed mat2 command script was not found")
+        base = Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "mat2script"
+        candidates = [base / "mat2-script.py", base / "mat2"]
+        candidate = next((p for p in candidates if p.is_file()), None)
+        if candidate is None:
+            raise RuntimeError("The bundled mat2 command script was not found")
+        runpy.run_path(str(candidate), run_name="__main__")
     else:
         Mat2Gui().mainloop()
