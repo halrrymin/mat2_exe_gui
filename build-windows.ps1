@@ -12,39 +12,27 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$logPath = Join-Path $PSScriptRoot 'build.log'
+Start-Transcript -Path $logPath -Force | Out-Null
+$success = $false
+try {
 $python = Join-Path $MsysRoot 'ucrt64\bin\python.exe'
 if (-not (Test-Path $python)) {
     throw "MSYS2 UCRT64 Python was not found at: $python"
 }
 
 # GTK/PyGObject, cairo and Tk come from MSYS2; avoid asking pip to rebuild them.
-& $python -m pip install --upgrade --no-deps mat2
-& $python -m pip install --upgrade pyinstaller mutagen
+& $python -m pip install --upgrade --break-system-packages --no-deps mat2
+if ($LASTEXITCODE -ne 0) { throw "Installing mat2 failed with exit code $LASTEXITCODE." }
+& $python -m pip install --upgrade --break-system-packages pyinstaller mutagen
+if ($LASTEXITCODE -ne 0) { throw "Installing build dependencies failed with exit code $LASTEXITCODE." }
 
 $scriptsPath = (& $python -c "import sysconfig; print(sysconfig.get_path('scripts'))").Trim()
 $mat2Script = Join-Path $scriptsPath 'mat2-script.py'
 if (-not (Test-Path $mat2Script)) { $mat2Script = Join-Path $scriptsPath 'mat2' }
 if (-not (Test-Path $mat2Script)) { throw "Installed mat2 command script was not found." }
 
-$entryPoint = @'
-from pathlib import Path
-import runpy
-import sysconfig
-
-scripts = Path(sysconfig.get_path("scripts"))
-for name in ("mat2-script.py", "mat2"):
-    candidate = scripts / name
-    if candidate.is_file():
-        runpy.run_path(str(candidate), run_name="__main__")
-        break
-else:
-    raise RuntimeError("The installed mat2 command script was not found")
-'@
-$entryFile = Join-Path $PSScriptRoot 'mat2_entry.py'
-Set-Content -Path $entryFile -Value $entryPoint -NoNewline -Encoding utf8
-
-try {
-    & $python -m PyInstaller `
+& $python -m PyInstaller `
         --noconfirm --clean --onefile --console `
         --name mat2-gui `
         --distpath $OutputDirectory `
@@ -62,7 +50,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed with exit code $LASTEXITCODE." }
 }
 finally {
-    Remove-Item -Force $entryFile -ErrorAction SilentlyContinue
+    $success = $true
+    Stop-Transcript | Out-Null
 }
 
 Write-Host "Created: $(Join-Path $OutputDirectory 'mat2-gui.exe')"

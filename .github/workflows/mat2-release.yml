@@ -76,6 +76,7 @@ jobs:
           name: mat2-build-diagnostics
           path: |
             build
+            build.log
             *.spec
             dist
           if-no-files-found: ignore
